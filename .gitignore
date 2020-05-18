@@ -1,0 +1,8 @@
+**/*.pyc
+**/__pycache__
+
+models
+data/europarl*
+my_alignments.txt
+save_dict.json
+data/
