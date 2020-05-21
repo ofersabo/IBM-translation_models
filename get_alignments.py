@@ -1,9 +1,7 @@
 import json
 import pprint
-import clize
 import sys
 from operator import itemgetter
-from copy import deepcopy
 
 def create_list_of_sentences(file_a,file_b,debug):
     fa = open(file_a)
@@ -32,13 +30,19 @@ def get_corpus(filename):
 def build_alignments(all_translations, corpus):
     all_alignments = []
     for sentence_index,pair in enumerate(corpus):
-        if sentence_index % 50 == 0:
+        if sentence_index % 500 == 0:
             print(sentence_index)
         st = ""
         for i,word_english in enumerate(pair['en'].split()):
             max = 0
-            save_j = 9999
-            tran = {i[0]:i[1] for i in all_translations[word_english]}
+            save_j = 0
+            if word_english in all_translations:
+                tran = {i[0]:i[1] for i in all_translations[word_english]}
+            else:
+                save_j = 0
+                st += str(save_j)+"-"+str(i)+" "
+                continue
+
             for j,word_french in enumerate(pair['fr'].split()):
                 if word_french in tran and tran[word_french] > max:
                     save_j = j
