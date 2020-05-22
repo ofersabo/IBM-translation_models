@@ -39,16 +39,17 @@ def build_alignments(all_translations, corpus):
             if word_english in all_translations:
                 tran = {i[0]:i[1] for i in all_translations[word_english]}
             else:
-                save_j = 0
-                st += str(save_j)+"-"+str(i)+" "
+                # save_j = 0
+                # st += str(save_j)+"-"+str(i)+" "
                 continue
 
             for j,word_french in enumerate(pair['fr'].split()):
                 if word_french in tran and tran[word_french] > max:
                     save_j = j
                     max = tran[word_french]
+            if tran[None] < max:
+                st += str(save_j)+"-"+str(i)+" "
 
-            st += str(save_j)+"-"+str(i)+" "
         st = st[:-1]
         st += "\n"
         all_alignments.append(st)
