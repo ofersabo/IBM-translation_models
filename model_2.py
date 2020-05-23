@@ -6,14 +6,13 @@ import time
 import random
 from collections import defaultdict
 
+Null = [None]
+
 
 def vector_sums_to_1(v):
     s = sum(v)
     r = [i / s for i in v]
     return r
-
-
-Null = [None]
 
 
 def get_sentences(filename):
@@ -34,7 +33,7 @@ def get_words_of_both_lang(corpus):
     return d
 
 
-def get_set_of_length_pairs(corpus,use_set=True):
+def get_set_of_length_pairs(corpus, use_set=True):
     if use_set:
         set_of_pairs = set()
     else:
@@ -50,7 +49,6 @@ def get_set_of_length_pairs(corpus,use_set=True):
         return set_of_pairs
     else:
         return list_of_pairs
-
 
 
 def init_translation_probabilities(corpus):
@@ -78,28 +76,28 @@ def read_alignments(file):
     return all
 
 
-def get_init_alignments_from_model_1(file_to_read,corpus):
+def get_init_alignments_from_model_1(file_to_read, corpus):
     previous_alignments = read_alignments(file_to_read)
     count_e = defaultdict(lambda: 0, {})
     count_alingment = defaultdict(lambda: 0, {})
-    list_of_pairs = get_set_of_length_pairs(corpus=corpus,use_set=False)
+    list_of_pairs = get_set_of_length_pairs(corpus=corpus, use_set=False)
     for pair, prev in zip(list_of_pairs, previous_alignments):
         en_length = pair[0]
         fr_length = pair[1]
         for en_word_index in range(en_length):
             fr_index = prev[en_word_index]
             if fr_index == -1: fr_index = fr_length
-            count_alingment[fr_index,en_word_index, fr_length,en_length] += 1
-            count_e[en_word_index, fr_length,en_length] += 1
-    a = {k: (v/(count_e[k[1:]])) for k,v in count_alingment.items()}
-    return defaultdict(lambda: 10**-2,a)
+            count_alingment[fr_index, en_word_index, fr_length, en_length] += 1
+            count_e[en_word_index, fr_length, en_length] += 1
+    a = {k: (v / (count_e[k[1:]])) for k, v in count_alingment.items()}
+    return defaultdict(lambda: 10 ** -2, a)
 
 
 def init_alignments_probabilities(corpus):
     if args.initialization_file:
         file_to_read = args.initialization_file
         print(file_to_read)
-        return get_init_alignments_from_model_1(file_to_read,corpus)
+        return get_init_alignments_from_model_1(file_to_read, corpus)
 
     set_of_pairs = get_set_of_length_pairs(corpus)
     a = {}
@@ -110,7 +108,7 @@ def init_alignments_probabilities(corpus):
             x = [random.random() for fr_index in range(fr_length + 1)]
             x = vector_sums_to_1(x)
             for fr_index, p in enumerate(x):
-                a[fr_index,en_word_index,fr_length,en_length] = p
+                a[fr_index, en_word_index, fr_length, en_length] = p
 
     return a
 
@@ -139,7 +137,7 @@ def do_single_iteration(corpus, translation_probabilities, cooccurrences, align)
                 count_cooccurrences[fre_w, en_word] += delta
                 count_english_words[fre_w] += delta
                 count_alignments[fr_index, en_index, length_fr, length_en] += delta
-                count_total_into_index_i[en_index, length_fr,length_en] += delta
+                count_total_into_index_i[en_index, length_fr, length_en] += delta
 
     for en_word, possible_words in cooccurrences.items():
         for fre_w in possible_words:
@@ -176,11 +174,10 @@ def train_model(corpus, iterations_to_preform):
         if args.output_parameters_every_epoch and args.output_parameter_file_name:
             result_table = prepare_output(translation_probabilities, alignments)
             f = args.output_parameter_file_name
-            with open(f+"iteration_"+str(iteration), 'w') as f:
+            with open(f + "iteration_" + str(iteration), 'w') as f:
                 json.dump(result_table, f)
 
     return translation_probabilities, alignments
-
 
 
 def create_list_of_sentences(file_a, file_b, less_sentences):
@@ -228,7 +225,7 @@ def main():
         print("less sentences ", less_sentences)
         print("debug ", debug)
         print("output_parameters_every_epoch ", args.output_parameters_every_epoch)
-    corpus = create_list_of_sentences(english_file_name,french_file_name, less_sentences)
+    corpus = create_list_of_sentences(english_file_name, french_file_name, less_sentences)
 
     if verbose:
         print("Done reading corpus")
