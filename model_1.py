@@ -28,13 +28,6 @@ def get_words_of_both_lang(corpus):
 
 
 def init_translation_probabilities(corpus):
-    '''
-    Given a `corpus` generate the first set of translation probabilities,
-    which can be accessed as
-    p(e|s) <=> translation_probabilities[e][s]
-    we first assume that for an `e` and set of `s`s, it is equally likely
-    that e will translate to any s in `s`s
-    '''
     words = get_words_of_both_lang(corpus)
     cooccurrences = {wr_en: set() for wr_en in words['en']}
     for pair in corpus:
@@ -47,19 +40,9 @@ def init_translation_probabilities(corpus):
                            wr_en in cooccurrences}
 
     return initial_translation, cooccurrences
-    # return {
-    #     word_en: {word_fr: 1/len(words['en'])
-    #               for word_fr in words['fr']}
-    #     for word_en in words['en']}
 
 
-def train_iteration(corpus, words, count_english_words, translation_probabilities, cooccurrences):
-    '''
-    Perform one iteration of the EM-Algorithm
-    count_english_words: counts of the destination words, weighted according to
-             their translation probabilities t(e|s)
-    '''
-
+def do_single_iteration(corpus, words, count_english_words, translation_probabilities, cooccurrences):
     counts_cooccurrences = {word_en: {word_fr: 0 for word_fr in possible_words}
                             for word_en, possible_words in cooccurrences.items()}
 
@@ -88,40 +71,28 @@ def train_iteration(corpus, words, count_english_words, translation_probabilitie
 
 
 def train_model(corpus, iterations_to_preform):
-    '''
-    Given a `corpus`, train a translation model on that corpus
-    '''
     verbose = args.verbose
     words = get_words_of_both_lang(corpus)
 
     count_engilsh_words = {word_en: 0 for word_en in words['en']}
-    inital_translation_probabilities, cooccurrences = init_translation_probabilities(corpus)
+    translation_probabilities, cooccurrences = init_translation_probabilities(corpus)
 
-    # iterations = 0
     if verbose:
         print("first iteration started")
     for iteration in range(iterations_to_preform):
         start = time.time()
 
-        translation_probabilities = train_iteration(
+        translation_probabilities = do_single_iteration(
             corpus, words, count_engilsh_words,
-            inital_translation_probabilities, cooccurrences
+            translation_probabilities, cooccurrences
         )
 
         end = time.time()
         t = end - start
         if verbose:
             print("iteration %d completed, time took in sec %f, in min %f" % (iteration, t, t / 60))
-        # prev_translation_probabilities = translation_probabilities
-        # iterations += 1
-        # with open(translation_probabilities_file,"w") as fw:
-        #     json.dump(translation_probabilities,fw)
     return translation_probabilities
 
-
-# def get_alignments(translations,source,target):
-#     words_alignments = []
-#     for i in range(len(target)):
 
 
 def create_list_of_sentences(file_a, file_b, less_sentences):
@@ -133,9 +104,6 @@ def create_list_of_sentences(file_a, file_b, less_sentences):
     this_fraction = ((len(a) / 100) * less_sentences)
     this_fraction = int(this_fraction)
 
-    print(type(this_fraction))
-    print(this_fraction)
-
     final_output = []
     for ii, (e_sentence, f_sentence) in enumerate(zip(a, b)):
         final_output.append({"en": e_sentence, "fr": f_sentence})
@@ -146,25 +114,16 @@ def create_list_of_sentences(file_a, file_b, less_sentences):
 
 def prepare_output(translation_probabilities):
     d = {
-        # for each english word
-        # sort the words it could translate to; most probable first
         k: sorted(v.items(), key=itemgetter(1), reverse=True)
-        # then grab the head of that == `(most_probable, p(k|most probable)`
-        # and the first of that pair (the actual word!)
         for (k, v) in translation_probabilities.items()
     }
-    # for en_w,fr_w_and_prob in d.items():
-    #     compute_ratio = fr_w_and_prob[0][1] / 100
-    #     for ii,(w,p) in enumerate(fr_w_and_prob):
-    #         if p < compute_ratio and ii>3:
-    #             break
-    #     d[en_w] = fr_w_and_prob[:ii]
 
     return d
 
 
 def main():
-    infile = args.file_name
+    english_file_name = args.english_file_name or "../data/hansards.e"
+    french_file_name = args.french_file_name or "../data/hansards.f"
     outfile = args.output_parameter_file_name
     iterations = args.number_of_iterations
     debug = args.debug
@@ -172,18 +131,14 @@ def main():
     verbose = args.verbose
 
     if debug:
-        if not infile:
-            infile = "data/sentences.json"
         outfile = "debug_output.json"
     if verbose:
         print(outfile)
         print("iterations to perform ", iterations)
         print("less sentences ", less_sentences)
         print("debug ", debug)
-    if infile:
-        corpus = get_sentences(infile)
-    else:
-        corpus = create_list_of_sentences("../data/hansards.e", "../data/hansards.f", less_sentences)
+    corpus = create_list_of_sentences(english_file_name,french_file_name, less_sentences)
+
     if verbose:
         print("Done reading corpus")
 
@@ -198,7 +153,8 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--file_name", type=str, required=False, default=None)
+    parser.add_argument("--english_file_name", type=str, required=False, default=None)
+    parser.add_argument("--french_file_name", type=str, required=False, default=None)
     parser.add_argument("--size", default=100.0, type=float, required=False,
                         help="Fraction to use")
     parser.add_argument("--output_parameter_file_name", type=str, required=True,
