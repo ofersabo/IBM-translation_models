@@ -64,8 +64,11 @@ def do_single_iteration(corpus, words, count_english_words, translation_probabil
 
     for en_word, possible_words in cooccurrences.items():
         for fre_w in possible_words:
-            translation_probabilities[en_word][fre_w] = counts_cooccurrences[en_word][fre_w] / occurrences_in_french[
-                fre_w]
+            if args.enhanced_smoothing:
+                translation_probabilities[en_word][fre_w] = (counts_cooccurrences[en_word][fre_w] + n) / (occurrences_in_french[fre_w] + n *V)
+            else:
+                translation_probabilities[en_word][fre_w] = counts_cooccurrences[en_word][fre_w] / occurrences_in_french[
+                    fre_w]
 
     return translation_probabilities
 
@@ -145,6 +148,7 @@ def main():
         print("less sentences ", less_sentences)
         print("debug ", debug)
         print("output_parameters_every_epoch ", args.output_parameters_every_epoch)
+        print("smoothing ", args.enhanced_smoothing)
     corpus = create_list_of_sentences(english_file_name,french_file_name, less_sentences)
 
     if verbose:
@@ -173,10 +177,13 @@ if __name__ == '__main__':
 
     parser.add_argument("--number_of_iterations", type=int, required=True)
     parser.add_argument("--debug", type=bool, required=False, default=False)
+    parser.add_argument("--enhanced_smoothing", type=bool, required=False, default=False)
     parser.add_argument("--verbose", type=bool, required=False, default=True)
     parser.add_argument("--output_parameters_every_epoch", type=bool, required=False, default=False)
 
-    global args
+    global args,n,V
     args = parser.parse_args()
+    n = 0.01
+    V = 100000
 
     main()

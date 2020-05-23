@@ -10,6 +10,7 @@ python model_1.py will run IBM model 1. Please use the following arguments to ru
 "--number_of_iterations" the number of iterations to run
 "--verbose" whether you want to see output throughout the training, i.e. the current iteration number. 
 "--output_parameters_every_epoch" whether you want to store the parameters after every iteration
+"--enhanced_smoothing" use the smoothing as it is described in this paper: "Improving IBM Word-Alignment Model 1"
 
 Here is the command I'm using to run model 1. 
 python model_1.py --english_file_name ../data/hansards.e
@@ -42,7 +43,7 @@ python get_alignments.py data/english.txt data/french.txt parameters_output.json
 
 
 
-
-For me the Null word is the last index in each french sentence. 
-Also, I don't print an alignment to the Null word. 
+Another side note, in y implementation the NULL word is actully the last word index. 
+Also in the get_alignments script I don't output words that are aligned to the NULL word. The same practice was done in the 
+example file.
 
