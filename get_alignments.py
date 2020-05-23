@@ -28,7 +28,8 @@ def get_corpus(filename):
 
 def build_alignments(parameters, corpus):
     align = defaultdict(lambda: 10 ** -5, {})
-    if "alignments" in parameters:
+    if len(parameters) == 2 and "alignments" in parameters:
+        print("output alignment from model 2 parameters")
         translations = parameters['trans']
         format_align = parameters['alignments']
         for a in format_align:
@@ -36,14 +37,16 @@ def build_alignments(parameters, corpus):
             v = a['value']
             align[k] = v
     else:
+        print("output alignment from model 1 parameters")
         translations = parameters
 
     all_alignments = []
     for sentence_index,pair in enumerate(corpus):
         if verbose and sentence_index % 500 == 0:
             print(sentence_index)
-        if verbose and sentence_index == 5000:
+        if verbose and sentence_index == 38:
             write_to_file(all_alignments,outfile)
+            print("output 37 lines")
         english_sentence_length = len(pair['en'].split())
         french_sentence_length = len(pair['fr'].split())
 
@@ -75,7 +78,8 @@ def build_alignments(parameters, corpus):
     return all_alignments
 
 
-def main(tran_file):
+def main():
+    tran_file = tran
     parameters = get_corpus(tran_file)
 
     corpus = create_list_of_sentences(english_file,french_file, debug=False)
@@ -90,12 +94,12 @@ def write_to_file(all_strings, outfile):
 
 if __name__ == '__main__':
     import sys,os
-    global outfile,verbose,english_file,french_file
+    global outfile,verbose,english_file,french_file, tran
     english_file = sys.argv[1] if len(sys.argv) > 1 else "../data/hansards.e"
     french_file  = sys.argv[2] if len(sys.argv) > 2 else "../data/hansards.f"
     tran = sys.argv[3] if len(sys.argv) > 3 else "save_dict.json"
     outfile = sys.argv[4] if len(sys.argv) > 4 else "my_alignments.txt"
     verbose = sys.argv[5] if len(sys.argv) > 5 else "true"
     verbose = verbose.lower() == "true"
-    main(tran_file = tran)
+    main()
 
