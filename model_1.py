@@ -91,6 +91,13 @@ def train_model(corpus, iterations_to_preform):
         t = end - start
         if verbose:
             print("iteration %d completed, time took in sec %f, in min %f" % (iteration, t, t / 60))
+
+        if args.output_parameters_every_epoch and args.output_parameter_file_name:
+            result_table = prepare_output(translation_probabilities)
+            f = args.output_parameter_file_name
+            with open(f+"iteration_"+str(iteration), 'w') as f:
+                json.dump(result_table, f)
+
     return translation_probabilities
 
 
@@ -137,10 +144,14 @@ def main():
         print("iterations to perform ", iterations)
         print("less sentences ", less_sentences)
         print("debug ", debug)
+        print("output_parameters_every_epoch ", args.output_parameters_every_epoch)
     corpus = create_list_of_sentences(english_file_name,french_file_name, less_sentences)
 
     if verbose:
         print("Done reading corpus")
+
+    if debug:
+        exit()
 
     probabilities = train_model(corpus, iterations_to_preform=iterations)
     result_table = prepare_output(probabilities)
@@ -163,6 +174,7 @@ if __name__ == '__main__':
     parser.add_argument("--number_of_iterations", type=int, required=True)
     parser.add_argument("--debug", type=bool, required=False, default=False)
     parser.add_argument("--verbose", type=bool, required=False, default=True)
+    parser.add_argument("--output_parameters_every_epoch", type=bool, required=False, default=False)
 
     global args
     args = parser.parse_args()

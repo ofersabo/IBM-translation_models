@@ -1,11 +1,10 @@
 import json
-import pprint
 import sys
-from operator import itemgetter
+from collections import defaultdict
 
-def create_list_of_sentences(file_a,file_b,debug):
-    fa = open(file_a)
-    fb = open(file_b)
+def create_list_of_sentences(english_f, french_f, debug):
+    fa = open(english_f)
+    fb = open(french_f)
     a = fa.readlines()
     b = fb.readlines()
     final_output = []
@@ -27,28 +26,47 @@ def get_corpus(filename):
     #     print(corpus, file=sys.stderr)
     return corpus
 
-def build_alignments(all_translations, corpus):
+def build_alignments(parameters, corpus):
+    align = defaultdict(lambda: 10 ** -5, {})
+    if "alignments" in parameters:
+        translations = parameters['trans']
+        format_align = parameters['alignments']
+        for a in format_align:
+            k = tuple(a['key'])
+            v = a['value']
+            align[k] = v
+    else:
+        translations = parameters
+
     all_alignments = []
     for sentence_index,pair in enumerate(corpus):
-        if sentence_index % 500 == 0:
+        if verbose and sentence_index % 500 == 0:
             print(sentence_index)
+        if verbose and sentence_index == 5000:
+            write_to_file(all_alignments,outfile)
+        english_sentence_length = len(pair['en'].split())
+        french_sentence_length = len(pair['fr'].split())
+
         st = ""
-        for i,word_english in enumerate(pair['en'].split()):
+
+        for en_index,word_english in enumerate(pair['en'].split()):
             max = 0
             save_j = 0
-            if word_english in all_translations:
-                tran = {i[0]:i[1] for i in all_translations[word_english]}
+            if word_english in translations:
+                tran = {z[0]:z[1] for z in translations[word_english]}
             else:
                 # save_j = 0
-                # st += str(save_j)+"-"+str(i)+" "
+                # st += str(save_j)+"-"+str(en_index)+" "
                 continue
 
-            for j,word_french in enumerate(pair['fr'].split()):
-                if word_french in tran and tran[word_french] > max:
-                    save_j = j
-                    max = tran[word_french]
-            if tran[None] < max:
-                st += str(save_j)+"-"+str(i)+" "
+            for french_index,word_french in enumerate(pair['fr'].split()):
+                a = align[french_index,en_index,french_sentence_length,english_sentence_length]
+                if word_french in tran and tran[word_french] * a > max:
+                    save_j = french_index
+                    max = tran[word_french] * a
+            none_a  = align[en_index,french_sentence_length,english_sentence_length,french_sentence_length]
+            if tran[None] * none_a < max:
+                st += str(save_j)+"-"+str(en_index)+" "
 
         st = st[:-1]
         st += "\n"
@@ -57,23 +75,27 @@ def build_alignments(all_translations, corpus):
     return all_alignments
 
 
-def main(tran_file,outfile):
-    translations = get_corpus(tran_file)
-    corpus = create_list_of_sentences("../data/hansards.e", "../data/hansards.f", debug=False)
-    all_strings = build_alignments(translations,corpus)
-    if outfile:
-        with open(outfile, 'w') as f:
-            f.writelines(all_strings)
-    else:
-        for l in all_strings:
-            print(l)
+def main(tran_file):
+    parameters = get_corpus(tran_file)
+
+    corpus = create_list_of_sentences(english_file,french_file, debug=False)
+    all_strings = build_alignments(parameters,corpus)
+    write_to_file(all_strings, outfile)
+
+
+def write_to_file(all_strings, outfile):
+    with open(outfile, 'w') as f:
+        f.writelines(all_strings)
 
 
 if __name__ == '__main__':
     import sys,os
-    x = os.getcwd()
-    print(x)
-    tran = sys.argv[1] if len(sys.argv) > 1 else "save_dict.json"
-    outfile = sys.argv[2] if len(sys.argv) > 2 else "my_alignments.txt"
-    main(tran_file = tran,outfile=outfile)
+    global outfile,verbose,english_file,french_file
+    english_file = sys.argv[1] if len(sys.argv) > 1 else "../data/hansards.e"
+    french_file  = sys.argv[2] if len(sys.argv) > 2 else "../data/hansards.f"
+    tran = sys.argv[3] if len(sys.argv) > 3 else "save_dict.json"
+    outfile = sys.argv[4] if len(sys.argv) > 4 else "my_alignments.txt"
+    verbose = sys.argv[5] if len(sys.argv) > 5 else "true"
+    verbose = verbose.lower() == "true"
+    main(tran_file = tran)
 
