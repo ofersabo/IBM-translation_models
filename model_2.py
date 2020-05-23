@@ -1,7 +1,6 @@
 import json
 import sys, argparse
 from operator import itemgetter
-from copy import deepcopy
 import numpy as np
 import time
 import random
@@ -35,28 +34,26 @@ def get_words_of_both_lang(corpus):
     return d
 
 
-def get_maximal_length(corpus):
-    maximal_en = 0
-    maximal_fr = 0
+def get_set_of_length_pairs(corpus,use_set=True):
+    if use_set:
+        set_of_pairs = set()
+    else:
+        list_of_pairs = []
     for pair in corpus:
         en_length = len(pair['en'].split())
         fr_length = len(pair['fr'].split())
-        if en_length > maximal_en:
-            maximal_en = en_length
-        if fr_length > maximal_fr:
-            maximal_fr = fr_length
+        if use_set:
+            set_of_pairs.add((en_length, fr_length))
+        else:
+            list_of_pairs.append((en_length, fr_length))
+    if use_set:
+        return set_of_pairs
+    else:
+        return list_of_pairs
 
-    return maximal_en, maximal_fr
 
 
 def init_translation_probabilities(corpus):
-    '''
-    Given a `corpus` generate the first set of translation probabilities,
-    which can be accessed as
-    p(e|s) <=> translation_probabilities[e][s]
-    we first assume that for an `e` and set of `s`s, it is equally likely
-    that e will translate to any s in `s`s
-    '''
     words = get_words_of_both_lang(corpus)
     cooccurrences = {wr_en: set() for wr_en in words['en']}
     for pair in corpus:
@@ -71,117 +68,119 @@ def init_translation_probabilities(corpus):
     return initial_translation, cooccurrences
 
 
+def read_alignments(file):
+    all = []
+    with open(file) as fr:
+        for line in fr:
+            alignments_of_line = set([tuple(map(int, x.split("-"))) for x in line.strip().split()])
+            a = defaultdict(lambda: -1, {e: f for f, e in alignments_of_line})
+            all.append(a)
+    return all
+
+
+def get_init_alignments_from_model_1(file_to_read,corpus):
+    previous_alignments = read_alignments(file_to_read)
+    count_e = defaultdict(lambda: 0, {})
+    count_alingment = defaultdict(lambda: 0, {})
+    list_of_pairs = get_set_of_length_pairs(corpus=corpus,use_set=False)
+    for pair, prev in zip(list_of_pairs, previous_alignments):
+        en_length = pair[0]
+        fr_length = pair[1]
+        for en_word_index in range(en_length):
+            fr_index = prev[en_word_index]
+            if fr_index == -1: fr_index = fr_length
+            count_alingment[fr_index,en_word_index, fr_length,en_length] += 1
+            count_e[en_word_index, fr_length,en_length] += 1
+    a = {k: (v/(count_e[k[1:]])) for k,v in count_alingment.items()}
+    return defaultdict(lambda: 10**-2,a)
+
+
 def init_alignments_probabilities(corpus):
-    maximal_a, maximal_b = get_maximal_length(corpus)
+    if args.initialization_file:
+        file_to_read = args.initialization_file
+        print(file_to_read)
+        return get_init_alignments_from_model_1(file_to_read,corpus)
+
+    set_of_pairs = get_set_of_length_pairs(corpus)
     a = {}
-    for en_length in range(maximal_a):
-        for fr_length in range(maximal_b + 1):
-            x = [random.random() for i in range(fr_length)]
+    for pair in set_of_pairs:
+        en_length = pair[0]
+        fr_length = pair[1]
+        for en_word_index in range(en_length):
+            x = [random.random() for fr_index in range(fr_length + 1)]
             x = vector_sums_to_1(x)
-            a[en_length, fr_length] = x
+            for fr_index, p in enumerate(x):
+                a[fr_index,en_word_index,fr_length,en_length] = p
 
     return a
 
 
-def train_iteration(corpus, words, count_english_words, translation_probabilities, cooccurrences, align):
-    '''
-    Perform one iteration of the EM-Algorithm
-    count_english_words: counts of the destination words, weighted according to
-             their translation probabilities t(e|s)
-    '''
+def do_single_iteration(corpus, translation_probabilities, cooccurrences, align):
+    count_cooccurrences = defaultdict(float)
 
-    counts_cooccurrences = {word_en: {word_fr: 0 for word_fr in possible_words}
-                            for word_en, possible_words in cooccurrences.items()}
-
-    occurrences_in_french = {word_fr: 0 for word_fr in words['fr']}
-
-    count_from_word_j_to_word_i = {k: [0] * len(v) for k,v in align}
-    sum_of_outgoing_from_index_in_french = {k: [0] * len(v) for k,v in align}
-    # alignments = defaultdict(float)  # wj aligned with wi
-    # c4 = defaultdict(float)  # wi aligned with anything
-
-    # alignments of q(j|i,l,m) use alignments[length_of_english_sentence,length_of_french_sentence][french_index]
+    count_english_words = defaultdict(float)
+    count_alignments = defaultdict(float)
+    count_total_into_index_i = defaultdict(float)
 
     for (words_in_en, words_in_french) in [(pair['en'].split(), pair['fr'].split())
                                            for pair in corpus]:
         length_en = len(words_in_en)
-        length_fr = len(words_in_french) + 1
-        delta_for_all_words = []
-        this_single_sen_count_alignment_from_index_i = []
+        length_fr = len(words_in_french)
         for en_index, en_word in enumerate(words_in_en):
-            count_english_words[en_word] = 0
             nominator = []
             for fr_index, fre_w in enumerate(words_in_french + Null):
-                this_single_sen_count_alignment_from_index_i.append(0)
-                nominator.append(align[length_en, length_fr][fr_index] * translation_probabilities[en_word][fre_w])
+                nominator.append(
+                    align[fr_index, en_index, length_fr, length_en] * translation_probabilities[en_word][fre_w])
 
             denominator = sum(nominator)
-            delta = [t / denominator for t in nominator]
-            delta_for_all_words.append(delta)
 
             for fr_index, fre_w in enumerate(words_in_french + Null):
-                count_english_words[en_word] += delta[fr_index]
-                this_single_sen_count_alignment_from_index_i[fr_index] += delta[fr_index]
-
-        for en_index, en_word in enumerate(words_in_en):
-            for fr_index, fre_w in enumerate(words_in_french + Null):
-                counts_cooccurrences[en_word][fre_w] += (delta_for_all_words[en_index][fr_index] /
-                                                         count_english_words[en_word])
-
-                occurrences_in_french[fre_w] += delta_for_all_words[en_index][fr_index] / count_english_words[en_word]
-
-                count_from_word_j_to_word_i[length_en,length_fr] += delta_for_all_words[en_index][fr_index] / \
-                                                                   this_single_sen_count_alignment_from_index_i[
-                                                                       fr_index]
-                sum_of_outgoing_from_index_in_french[fr_index] += delta_for_all_words[en_index][fr_index]
-
+                delta = nominator[fr_index] / denominator
+                count_cooccurrences[fre_w, en_word] += delta
+                count_english_words[fre_w] += delta
+                count_alignments[fr_index, en_index, length_fr, length_en] += delta
+                count_total_into_index_i[en_index, length_fr,length_en] += delta
 
     for en_word, possible_words in cooccurrences.items():
         for fre_w in possible_words:
-            translation_probabilities[en_word][fre_w] = counts_cooccurrences[en_word][fre_w] / occurrences_in_french[
-                fre_w]
+            translation_probabilities[en_word][fre_w] = count_cooccurrences[fre_w, en_word] / count_english_words[fre_w]
+    align = {}
+    for k, v in count_alignments.items():
+        align[k] = v / count_total_into_index_i[k[1:]]
 
-    return translation_probabilities, alignments
+    return translation_probabilities, align
 
 
 def train_model(corpus, iterations_to_preform):
-    '''
-    Given a `corpus`, train a translation model on that corpus
-    '''
     verbose = args.verbose
-    words = get_words_of_both_lang(corpus)
 
-    count_engilsh_words = {word_en: 0 for word_en in words['en']}
-    inital_translation_probabilities, cooccurrences = init_translation_probabilities(corpus)
+    translation_probabilities, cooccurrences = init_translation_probabilities(corpus)
     alignments = init_alignments_probabilities(corpus)
 
-    # alignments of q(j|i,l.m) use alignments[length_of_english_sentence,length_of_french_sentence][french_index]
+    # alignments of q(j|iii,l.m) use alignments[length_of_english_sentence,length_of_french_sentence][french_index]
 
-    # iterations = 0
     if verbose:
         print("first iteration started")
     for iteration in range(iterations_to_preform):
         start = time.time()
 
-        translation_probabilities, alignments = train_iteration(
-            corpus, words, count_engilsh_words,
-            inital_translation_probabilities, cooccurrences, alignments
+        translation_probabilities, alignments = do_single_iteration(
+            corpus, translation_probabilities, cooccurrences, alignments
         )
 
         end = time.time()
         t = end - start
         if verbose:
             print("iteration %d completed, time took in sec %f, in min %f" % (iteration, t, t / 60))
-        # prev_translation_probabilities = translation_probabilities
-        # iterations += 1
-        # with open(translation_probabilities_file,"w") as fw:
-        #     json.dump(translation_probabilities,fw)
-    return translation_probabilities
 
+        if args.output_parameters_every_epoch and args.output_parameter_file_name:
+            result_table = prepare_output(translation_probabilities, alignments)
+            f = args.output_parameter_file_name
+            with open(f+"iteration_"+str(iteration), 'w') as f:
+                json.dump(result_table, f)
 
-# def get_alignments(translations,source,target):
-#     words_alignments = []
-#     for i in range(len(target)):
+    return translation_probabilities, alignments
+
 
 
 def create_list_of_sentences(file_a, file_b, less_sentences):
@@ -193,9 +192,6 @@ def create_list_of_sentences(file_a, file_b, less_sentences):
     this_fraction = ((len(a) / 100) * less_sentences)
     this_fraction = int(this_fraction)
 
-    print(type(this_fraction))
-    print(this_fraction)
-
     final_output = []
     for ii, (e_sentence, f_sentence) in enumerate(zip(a, b)):
         final_output.append({"en": e_sentence, "fr": f_sentence})
@@ -204,27 +200,20 @@ def create_list_of_sentences(file_a, file_b, less_sentences):
     return final_output
 
 
-def prepare_output(translation_probabilities):
-    d = {
-        # for each english word
-        # sort the words it could translate to; most probable first
+def prepare_output(translation_probabilities, alignments):
+    combined = {"trans": {
         k: sorted(v.items(), key=itemgetter(1), reverse=True)
-        # then grab the head of that == `(most_probable, p(k|most probable)`
-        # and the first of that pair (the actual word!)
         for (k, v) in translation_probabilities.items()
+    },
+        "alignments": remap_keys(alignments)
     }
-    # for en_w,fr_w_and_prob in d.items():
-    #     compute_ratio = fr_w_and_prob[0][1] / 100
-    #     for ii,(w,p) in enumerate(fr_w_and_prob):
-    #         if p < compute_ratio and ii>3:
-    #             break
-    #     d[en_w] = fr_w_and_prob[:ii]
 
-    return d
+    return combined
 
 
 def main():
-    infile = args.file_name
+    english_file_name = args.english_file_name or "../data/hansards.e"
+    french_file_name = args.french_file_name or "../data/hansards.f"
     outfile = args.output_parameter_file_name
     iterations = args.number_of_iterations
     debug = args.debug
@@ -232,24 +221,21 @@ def main():
     verbose = args.verbose
 
     if debug:
-        if not infile:
-            infile = "data/sentences.json"
         outfile = "debug_output.json"
     if verbose:
         print(outfile)
         print("iterations to perform ", iterations)
         print("less sentences ", less_sentences)
         print("debug ", debug)
-    if infile:
-        corpus = get_sentences(infile)
-    else:
-        corpus = create_list_of_sentences("../data/hansards.e", "../data/hansards.f", less_sentences)
+        print("output_parameters_every_epoch ", args.output_parameters_every_epoch)
+    corpus = create_list_of_sentences(english_file_name,french_file_name, less_sentences)
+
     if verbose:
         print("Done reading corpus")
 
     probabilities, alignments = train_model(corpus, iterations_to_preform=iterations)
 
-    result_table = prepare_output(probabilities)
+    result_table = prepare_output(probabilities, alignments)
     if outfile:
         with open(outfile, 'w') as f:
             json.dump(result_table, f)
@@ -257,21 +243,28 @@ def main():
         json.dump(result_table, sys.stdout)
 
 
+def remap_keys(mapping):
+    return [{'key': k, 'value': v} for k, v in mapping.items()]
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--file_name", type=str, required=False, default=None)
+    parser.add_argument("--english_file_name", type=str, required=False, default=None)
+    parser.add_argument("--french_file_name", type=str, required=False, default=None)
+    parser.add_argument("--initialization_file", type=str, required=False, default=None)
+
     parser.add_argument("--size", default=100.0, type=float, required=False,
                         help="Fraction to use")
+
     parser.add_argument("--output_parameter_file_name", type=str, required=True,
                         help="The file name to be generated")
 
     parser.add_argument("--number_of_iterations", type=int, required=True)
     parser.add_argument("--debug", type=bool, required=False, default=False)
     parser.add_argument("--verbose", type=bool, required=False, default=True)
-    parser.add_argument("--model-2", type=bool, required=False, default=True)
+    parser.add_argument("--output_parameters_every_epoch", type=bool, required=False, default=False)
 
     global args
-
     args = parser.parse_args()
 
     main()
