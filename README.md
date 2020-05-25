@@ -37,7 +37,7 @@ python model_2.py --initialization_file final_output_model_1/alignment_file.txt 
 
 
 
-##Alignment instructions:
+## Alignment instructions:
 
 To get the alignment file use the python script called get_alignments.py 
 
@@ -55,7 +55,7 @@ python get_alignments.py data/english.txt data/french.txt parameters_output.json
 
 
 
-##Double models alignment instructions:
+## Double models alignment instructions:
 
 I also implemented the double alignment file to which get the model prametrs of e-to-f and f-to-e and outputs 
 a alignment file. 
