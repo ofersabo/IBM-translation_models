@@ -1,6 +1,6 @@
-Running model 1 and model 2:
+Running model 1, model 2, and alignment scripts instructions:
 
-Model 1: 
+Model 1 instructions: 
 
 python model_1.py will run IBM model 1. Please use the following arguments to run the model correctly.
 "--english_file_name", a pointer to the to the English sentences file.
@@ -18,7 +18,10 @@ python model_1.py --english_file_name ../data/hansards.e
  --verbose True
 
 
-Model 2:
+
+
+Model 2 instructions:
+
 python model_2.py runs the IBM model 2. 
 please use the above same arguments when running this script, just for a single exception.
 Model_2 as an option to initialize the alignments from model_1 output.
@@ -27,7 +30,8 @@ which was produced by a model 1 parameters.
 
 
 
-Alignment:
+Alignment instructions:
+
 To get the alignment file use the python script called get_alignments.py 
 
 python get_alignments.py gets 5 arguments: 
@@ -42,7 +46,10 @@ This is an example how to run the get_alignments.py:
 python get_alignments.py data/english.txt data/french.txt parameters_output.json my_alignment.txt false 
 
 
-Double alignment:
+
+
+Double alignment instructions:
+
 I also implemented the double alignment file to which get the model prametrs of e-to-f and f-to-e and outputs 
 a alignment file. 
 To get this alignment file use the python script called double_parameters_get_alignments.py 
@@ -58,12 +65,4 @@ it outputs an periodic output to screen to see progress, also outputs to the sam
 
 This is an example how to run the get_alignments.py:
 python double_parameters_get_alignments.py data/english.txt data/french.txt parameters_output.json reverse_parameters_output.json my_alignment.txt false 
-
-
-
-
-
-Another side note, in y implementation the NULL word is actully the last word index. 
-Also in the get_alignments script I don't output words that are aligned to the NULL word. The same practice was done in the 
-example file.
 
