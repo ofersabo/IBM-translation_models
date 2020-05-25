@@ -1,6 +1,6 @@
-Running model 1, model 2, and alignment scripts instructions:
+#Running model 1, model 2, and alignment scripts instructions:
 
-Model 1 instructions: 
+##Model 1 instructions: 
 
 python model_1.py will run IBM model 1. Please use the following arguments to run the model correctly.
 "--english_file_name", a pointer to the to the English sentences file.
@@ -21,7 +21,7 @@ python model_1.py --english_file_name ../data/hansards.e
 
 
 
-Model 2 instructions:
+##Model 2 instructions:
 
 python model_2.py runs the IBM model 2. 
 please use the above same arguments when running this script, just for a single exception.
@@ -37,7 +37,7 @@ python model_2.py --initialization_file final_output_model_1/alignment_file.txt 
 
 
 
-Alignment instructions:
+##Alignment instructions:
 
 To get the alignment file use the python script called get_alignments.py 
 
@@ -55,7 +55,7 @@ python get_alignments.py data/english.txt data/french.txt parameters_output.json
 
 
 
-Double alignment instructions:
+##Double models alignment instructions:
 
 I also implemented the double alignment file to which get the model prametrs of e-to-f and f-to-e and outputs 
 a alignment file. 
