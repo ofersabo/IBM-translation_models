@@ -30,15 +30,35 @@ which was produced by a model 1 parameters.
 Alignment:
 To get the alignment file use the python script called get_alignments.py 
 
-python get_alignments.py gets three arguments: 
+python get_alignments.py gets 5 arguments: 
 First argument is the english file txt
 second argument is the french file txt 
 Third argument is the parameters file of either model 1 or model 2. the get alignments handles both parameters file.
 Fourth argument is the output alignment file.
-Fifth argument, verbose: use as false when testing, it outputs an periodic output to screen to see progress, also outputs to the same file an intermediate result after 5000 sentences.
+Fifth argument, verbose: when this is equalt the "true" string,
+it outputs an periodic output to screen to see progress, also outputs to the same file an intermediate result after 38 sentences.
 
 This is an example how to run the get_alignments.py:
 python get_alignments.py data/english.txt data/french.txt parameters_output.json my_alignment.txt false 
+
+
+Double alignment:
+I also implemented the double alignment file to which get the model prametrs of e-to-f and f-to-e and outputs 
+a alignment file. 
+To get this alignment file use the python script called double_parameters_get_alignments.py 
+
+python double_parameters_get_alignments.py gets 6 arguments: 
+First argument is the english file txt
+second argument is the french file txt 
+Third argument is the "e-to-f" (normal) parameters file of model 1. the alignment scripts handles only model 1 parameter file.
+Third argument is the "f-to-e" (reverse) parameters file of model 1.
+Fifth  argument is the output alignment file.
+sixth argument, verbose: when this is equal the "true" string,
+it outputs an periodic output to screen to see progress, also outputs to the same file an intermediate result after 38 sentences.
+
+This is an example how to run the get_alignments.py:
+python double_parameters_get_alignments.py data/english.txt data/french.txt parameters_output.json reverse_parameters_output.json my_alignment.txt false 
+
 
 
 

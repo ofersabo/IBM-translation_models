@@ -79,7 +79,7 @@ def build_alignments(parameters, corpus):
 
 
 def main():
-    tran_file = tran
+    tran_file = tran_e_f
     parameters = get_corpus(tran_file)
 
     corpus = create_list_of_sentences(english_file,french_file, debug=False)
@@ -94,10 +94,10 @@ def write_to_file(all_strings, outfile):
 
 if __name__ == '__main__':
     import sys,os
-    global outfile,verbose,english_file,french_file, tran
+    global outfile,verbose,english_file,french_file, tran_e_f
     english_file = sys.argv[1] if len(sys.argv) > 1 else "../data/hansards.e"
     french_file  = sys.argv[2] if len(sys.argv) > 2 else "../data/hansards.f"
-    tran = sys.argv[3] if len(sys.argv) > 3 else "save_dict.json"
+    tran_e_f = sys.argv[3] if len(sys.argv) > 3 else "save_dict.json"
     outfile = sys.argv[4] if len(sys.argv) > 4 else "my_alignments.txt"
     verbose = sys.argv[5] if len(sys.argv) > 5 else "true"
     verbose = verbose.lower() == "true"

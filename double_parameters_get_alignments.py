@@ -39,6 +39,7 @@ def build_alignments(parameters, corpus,second_parameters):
     else:
         print("output alignment from model 1 parameters")
         translations = parameters
+        inverse_tran = second_parameters
 
     all_alignments = []
     for sentence_index,pair in enumerate(corpus):
@@ -47,10 +48,16 @@ def build_alignments(parameters, corpus,second_parameters):
         if verbose and sentence_index == 38:
             write_to_file(all_alignments,outfile)
             print("output 37 lines")
-        english_sentence_length = len(pair['en'].split())
-        french_sentence_length = len(pair['fr'].split())
 
         st = ""
+        probability_french_for_sentence = []
+        for french_index, word_french in enumerate(pair['fr'].split()):
+            french_t = {z[0]:z[1] for z in second_parameters[word_french]}
+            probability_french = []
+            for en_index,word_english in enumerate(pair['en'].split()):
+                probability_french.append(french_t[word_english])
+            probability_per_word = ([ p/sum(probability_french) for p in probability_french])
+            probability_french_for_sentence.append(probability_per_word)
 
         for en_index,word_english in enumerate(pair['en'].split()):
             max = 0
@@ -60,24 +67,14 @@ def build_alignments(parameters, corpus,second_parameters):
             else:
                 continue
 
-            prob = [tran[word_french] for french_index,word_french in enumerate(pair['fr'].split()) ]
-            prob.append(tran[None])
-            prob = [p/sum(prob) for p in prob]
-            inverse_prob = []
-            for french_index, word_french in enumerate(pair['fr'].split()):
-                for z in second_parameters[word_french]:
-                    if z[0]== word_english:
-                        inverse_word_tran = z[1]
-                        break
-                inverse_prob.append(inverse_word_tran[word_english])
-            inverse_prob.append()
-            final_p = [ prob[iii] * inverse_prob[iii] for iii in range(len(prob))]
-
-                if word_french in tran and tran[word_french] * a > max:
+            for french_index,word_french in enumerate(pair['fr'].split()):
+                french_t = probability_french_for_sentence[french_index]
+                final_p = french_t[en_index] * tran[word_french]
+                if final_p > max:
                     save_j = french_index
-                    max = tran[word_french] * a
-            none_a  = align[en_index,french_sentence_length,english_sentence_length,french_sentence_length]
-            if tran[None] * none_a < max:
+                    max = final_p
+
+            if tran[None] < max:
                 st += str(save_j)+"-"+str(en_index)+" "
 
         st = st[:-1]
